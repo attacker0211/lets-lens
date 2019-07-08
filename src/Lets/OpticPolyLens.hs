@@ -52,30 +52,41 @@ import Lets.Data(AlongsideLeft(AlongsideLeft, getAlongsideLeft), AlongsideRight(
 import Prelude hiding (product)
 
 -- $setup
--- >>> import qualified Data.Map as Map(fromList)
--- >>> import qualified Data.Set as Set(fromList)
--- >>> import Data.Bool(bool)
--- >>> import Data.Char(ord)
--- >>> import Lets.Data
+import qualified Data.Map as Map(fromList)
+import qualified Data.Set as Set(fromList)
+import Data.Bool(bool)
+import Data.Char(ord)
+import Lets.Data
 
 data Lens s t a b =
   Lens
     (forall f. Functor f => (a -> f b) -> s -> f t)
 
+-- Lens :: (forall (f :: * -> *). Functor f 
+-- => (a -> f b) -> s -> f t) 
+-- -> Lens s t a b
+
 get ::
   Lens s t a b
   -> s
   -> a
-get (Lens r) =
-  getConst . r Const
+get (Lens r) s = getConst (r Const s)
+  -- getConst . r Const
 
+-- r :: a -> f b
+-- Const :: (a -> Const a b) -> s -> f t
+-- s -> Const a t
 set ::
   Lens s t a b
   -> s
   -> b
   -> t
-set (Lens r) a b =
-  getIdentity (r (const (Identity b)) a)
+set (Lens r) s b = getIdentity (r (const (Identity b)) s)
+-- (a -> f b) -> s -> f t => Identity t
+-- Identity :: a -> Identity a
+-- const :: a -> b -> a
+-- const (Identity b) :: x -> Identity b
+
 
 -- | The get/set law of lenses. This function should always return @True@.
 getsetLaw ::
@@ -125,8 +136,8 @@ modify ::
   -> (a -> b)
   -> s
   -> t
-modify =
-  error "todo: modify"
+modify l f s = set l s (f (get l s))
+-- (a -> f b) -> s -> f t
 
 -- | An alias for @modify@.
 (%~) ::
@@ -155,8 +166,7 @@ infixr 4 %~
   -> b
   -> s
   -> t
-(.~) =
-  error "todo: (.~)"
+(.~) l b s = set l s b
 
 infixl 5 .~
 
@@ -176,8 +186,7 @@ fmodify ::
   -> (a -> f b)
   -> s
   -> f t 
-fmodify =
-  error "todo: fmodify"
+fmodify (Lens l) = l
 
 -- |
 --
@@ -192,8 +201,7 @@ fmodify =
   -> f b
   -> s
   -> f t
-(|=) =
-  error "todo: (|=)"
+(|=) l fb s = (<$>) (set l s) fb
 
 infixl 5 |=
 
@@ -209,11 +217,11 @@ infixl 5 |=
 -- prop> let types = (x :: Int, y :: String) in setsetLaw fstL (x, y) z
 fstL ::
   Lens (a, x) (b, x) a b
-fstL =
-  error "todo: fstL"
-
--- |
---
+fstL = Lens (\fab (a, x) -> (<$>) (\t -> (t, x)) (fab a))
+-- (a -> f b) -> (a, x) -> f (b, x)
+-- f b
+--f (b, x)
+-- (a -> b) -> f a -> f b
 -- >>> modify sndL (++ "def") (13, "abc")
 -- (13,"abcdef")
 --
@@ -224,9 +232,8 @@ fstL =
 -- prop> let types = (x :: Int, y :: String) in setsetLaw sndL (x, y) z
 sndL ::
   Lens (x, a) (x, b) a b
-sndL =
-  error "todo: sndL"
-
+sndL = Lens (\f (x, a) -> (<$>) (\t -> (x, t)) (f a))
+-- (a -> f b) -> (x, a) -> f (x, b)
 -- |
 --
 -- >>> get (mapL 3) (Map.fromList (map (\c -> (ord c - 96, c)) ['a'..'d']))
@@ -250,10 +257,9 @@ mapL ::
   Ord k =>
   k
   -> Lens (Map k v) (Map k v) (Maybe v) (Maybe v)
-mapL =
-  error "todo: mapL"
+mapL k = Lens (\f m -> _)
 
--- |
+-- | (Maybe v -> f (Maybe v)) -> Map k v -> f (Map k v)
 --
 -- >>> get (setL 3) (Set.fromList [1..5])
 -- True
