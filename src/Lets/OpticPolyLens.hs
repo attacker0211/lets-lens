@@ -257,7 +257,12 @@ mapL ::
   Ord k =>
   k
   -> Lens (Map k v) (Map k v) (Maybe v) (Maybe v)
-mapL k = Lens (\f m -> _)
+mapL k = Lens $ \fa m -> (maybe (Map.delete k m) (\x -> Map.insert k x m)) <$> (fa (Map.lookup k m))
+-- insert :: Ord k => k -> a -> Map k a -> Map k a
+-- delete :: Ord k => k -> Map k a -> Map k a
+-- lookup :: Ord k => k -> Map k a -> Maybe a
+-- maybe :: Map k a -> (a -> (Map k a)) -> Maybe a -> (Map k a)
+-- (a -> b) -> f a -> f b
 
 -- | (Maybe v -> f (Maybe v)) -> Map k v -> f (Map k v)
 --
@@ -282,11 +287,8 @@ setL ::
   Ord k =>
   k
   -> Lens (Set k) (Set k) Bool Bool
-setL =
-  error "todo: setL"
+setL k = Lens $ \fb s -> (\b -> if b then Set.insert k s else Set.delete k s) <$> (fb (Set.member k s))
 
--- |
---
 -- >>> get (compose fstL sndL) ("abc", (7, "def"))
 -- 7
 --
@@ -296,8 +298,11 @@ compose ::
   Lens s t a b
   -> Lens q r s t
   -> Lens q r a b
-compose =
-  error "todo: compose"
+compose (Lens l1) (Lens l2) = Lens (\x -> l2 (l1 x))
+-- (a -> f b) -> q -> f r
+
+-- data Lens s t a b = Lens (forall f. Functor f => (a -> f b) -> s -> f t)
+-- data Lens q r s t = Lens (forall f. Functor f => (s -> f t) -> q -> f r)
 
 -- | An alias for @compose@.
 (|.) ::
@@ -318,8 +323,7 @@ infixr 9 |.
 -- 4
 identity ::
   Lens a b a b
-identity =
-  error "todo: identity"
+identity = Lens id
 
 -- |
 --
@@ -332,8 +336,8 @@ product ::
   Lens s t a b
   -> Lens q r c d
   -> Lens (s, q) (t, r) (a, c) (b, d)
-product =
-  error "todo: product"
+product l1 l2 = Lens (\f (s, q) -> (\(b, d) -> (set l1 s b, set l2 q d)) <$> f (get l1 s, get l2 q))
+
 
 -- | An alias for @product@.
 (***) ::
@@ -362,8 +366,8 @@ choice ::
   Lens s t a b
   -> Lens q r a b
   -> Lens (Either s q) (Either t r) a b
-choice =
-  error "todo: choice"
+choice (Lens l1) (Lens l2) = Lens (\fab x -> either (\s -> Left <$> (l1 fab s)) (\q -> Right <$> (l2 fab q)) x)
+
 
 -- | An alias for @choice@.
 (|||) ::
@@ -457,8 +461,7 @@ intAndL =
 getSuburb ::
   Person
   -> String
-getSuburb =
-  error "todo: getSuburb"
+getSuburb = get $ suburbL |. addressL
 
 
 -- |
@@ -472,8 +475,7 @@ setStreet ::
   Person
   -> String
   -> Person
-setStreet =
-  error "todo: setStreet"
+setStreet = set $ streetL |. addressL
 
 -- |
 --
@@ -485,8 +487,7 @@ setStreet =
 getAgeAndCountry ::
   (Person, Locality)
   -> (Int, String)
-getAgeAndCountry =
-  error "todo: getAgeAndCountry"
+getAgeAndCountry = get $ ageL *** countryL
 
 -- |
 --
@@ -497,8 +498,8 @@ getAgeAndCountry =
 -- (Person 28 "Mary" (Address "83 Mary Ln" "Maryland" (Locality "Some Other City" "Western Mary" "Maristan")),Address "15 Fred St" "Fredville" (Locality "Mary Mary" "Western Mary" "Maristan"))
 setCityAndLocality ::
   (Person, Address) -> (String, Locality) -> (Person, Address)
-setCityAndLocality =
-  error "todo: setCityAndLocality"
+setCityAndLocality = set $ (cityL |. localityL |. addressL) *** localityL
+  
   
 -- |
 --

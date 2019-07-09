@@ -88,11 +88,11 @@ import Lets.Profunctor(Profunctor(dimap))
 import Prelude hiding (product)
 
 -- $setup
--- >>> import qualified Data.Map as Map(fromList)
--- >>> import qualified Data.Set as Set(fromList)
--- >>> import Data.Bool(bool)
--- >>> import Data.Char(ord)
--- >>> import Lets.Data
+import qualified Data.Map as Map(fromList)
+import qualified Data.Set as Set(fromList)
+import Data.Bool(bool)
+import Data.Char(ord)
+import Lets.Data
 
 -- Let's remind ourselves of Traversable, noting Foldable and Functor.
 --
@@ -111,8 +111,8 @@ fmapT ::
   (a -> b)
   -> t a
   -> t b
-fmapT =
-  error "todo: fmapT"
+fmapT f = getIdentity . traverse (Identity . f)
+  -- Identity :: a -> Identity a 
 
 -- | Let's refactor out the call to @traverse@ as an argument to @fmapT@.
 over :: 
@@ -120,8 +120,7 @@ over ::
   -> (a -> b)
   -> s
   -> t
-over =
-  error "todo: over"
+over f g s = getIdentity (f (Identity . g) s)
 
 -- | Here is @fmapT@ again, passing @traverse@ to @over@.
 fmapTAgain ::
@@ -129,8 +128,11 @@ fmapTAgain ::
   (a -> b)
   -> t a
   -> t b
-fmapTAgain =
-  error "todo: fmapTAgain"
+fmapTAgain = over (traverse)
+
+-- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+-- over :: ((a -> Identity b) -> s -> Identity t) -> (a -> b) -> s -> t
+-- (a -> f b) -> t a -> f (t b) -> (a -> b) -> t a -> t b
 
 -- | Let's create a type-alias for this type of function.
 type Set s t a b =
@@ -143,24 +145,25 @@ type Set s t a b =
 sets ::
   ((a -> b) -> s -> t)
   -> Set s t a b  
-sets =
-  error "todo: sets"
+sets f = \x -> Identity . (f (getIdentity . x))
 
 mapped ::
   Functor f =>
   Set (f a) (f b) a b
-mapped =
-  error "todo: mapped"
+mapped = \ab fa -> Identity ((<$>) (getIdentity . ab) fa)
+
+-- type Set (f a) (f b) a b = (a -> Identity b) -> (f a) -> Identity (f b)
+-- traverse :: (Applicative f, Traversable t) => (a -> f b) -> t a -> f (t b)
+-- over :: ((a -> Identity b) -> s -> Identity t) -> (a -> b) -> s -> t
 
 set ::
   Set s t a b
   -> s
   -> b
   -> t
-set =
-  error "todo: set"
+set f s b = getIdentity (f (const (Identity b)) s)
 
-----
+--- Set s t a b = (a -> Identity b) -> s -> Identity t
 
 -- | Observe that @foldMap@ can be recovered from @traverse@ using @Const@.
 --
@@ -170,8 +173,10 @@ foldMapT ::
   (a -> b)
   -> t a
   -> b
-foldMapT =
-  error "todo: foldMapT"
+foldMapT f = getConst . traverse (Const . f)
+-- a -> f b, t a
+-- traverse ::  (a -> f b) -> t a -> f (t b)
+-- Const :: a -> Const a b -- Const a (t b)
 
 -- | Let's refactor out the call to @traverse@ as an argument to @foldMapT@.
 foldMapOf ::
@@ -179,8 +184,10 @@ foldMapOf ::
   -> (a -> r)
   -> s
   -> r
-foldMapOf =
-  error "todo: foldMapOf"
+foldMapOf f ar s = getConst ((f (Const . ar)) s)
+-- foldMapT :: (Monoid b, Traversable t) => (a -> b) -> t a -> b
+-- ((a -> Const r b) -> (s -> Const r t)) -> t ((a -> Const r b)) ->  (s -> Const r t)
+-- traverse ::  (a -> f b) -> t a -> f (t b)
 
 -- | Here is @foldMapT@ again, passing @traverse@ to @foldMapOf@.
 foldMapTAgain ::
