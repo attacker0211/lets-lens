@@ -184,7 +184,8 @@ foldMapOf ::
   -> (a -> r)
   -> s
   -> r
-foldMapOf f ar s = getConst ((f (Const . ar)) s)
+foldMapOf f ar = getConst . (f (Const . ar))  
+-- Const :: a -> Const a b
 -- foldMapT :: (Monoid b, Traversable t) => (a -> b) -> t a -> b
 -- ((a -> Const r b) -> (s -> Const r t)) -> t ((a -> Const r b)) ->  (s -> Const r t)
 -- traverse ::  (a -> f b) -> t a -> f (t b)
@@ -195,8 +196,12 @@ foldMapTAgain ::
   (a -> b)
   -> t a
   -> b
-foldMapTAgain =
-  error "todo: foldMapTAgain"
+foldMapTAgain f ta = foldMapOf (traverse) f ta
+-- foldMapOf :: ((a -> Const b b) -> t a -> Const b (t b))
+  -- -> (a -> b)
+  -- -> t a
+  -- -> b
+-- traverse :: (Applicative f, Traversable t) => (a -> Const b b) -> t a ->  Const b (t b)
 
 -- | Let's create a type-alias for this type of function.
 type Fold s t a b =
@@ -213,16 +218,17 @@ folds ::
   -> (a -> Const b a)
   -> s
   -> Const t s
-folds =
-  error "todo: folds"
+folds f aba = Const . f (getConst . aba)
 
 folded ::
   Foldable f =>
   Fold (f a) (f a) a a
-folded =
-  error "todo: folded"
-
-----
+folded  = folds fmapT 
+-- (a -> Const r a) -> f a -> Const r (f a)
+-- ((a -> r) -> (f a) -> r)  
+  --  -> (a -> Const r a)
+  -- -> (f a)
+  -- -> Const r (f a)
 
 -- | @Get@ is like @Fold@, but without the @Monoid@ constraint.
 type Get r s a =
