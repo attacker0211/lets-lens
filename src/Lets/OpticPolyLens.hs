@@ -500,7 +500,6 @@ setCityAndLocality ::
   (Person, Address) -> (String, Locality) -> (Person, Address)
 setCityAndLocality = set $ (cityL |. localityL |. addressL) *** localityL
   
-  
 -- |
 --
 -- >>> getSuburbOrCity (Left maryAddress)
