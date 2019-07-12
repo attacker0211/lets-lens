@@ -867,5 +867,4 @@ intOrLengthEven ::
   IntOr [a]
   -> IntOr Bool
 intOrLengthEven = over intOrP (even . length)
--- (t0 a0 -> f Bool) -> IntOr [a] -> f (IntOr Bool)
 -- ((a -> Identity b) -> s -> Identity t) -> (a -> b) -> s -> t
